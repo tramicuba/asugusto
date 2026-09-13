@@ -3,6 +3,10 @@
 
 import { supabase } from "./supabase.js";
 
+function resolveUserRole(user) {
+  return user?.user_metadata?.role ?? user?.app_metadata?.role ?? user?.role ?? user?.rol ?? null;
+}
+
 // Iniciar sesión con teléfono y contraseña
 export async function login(telefono, password) {
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -24,6 +28,10 @@ export async function logout() {
 
 // Obtener usuario actual
 export async function getCurrentUser() {
+  if (!supabase?.auth?.getUser) {
+    return null;
+  }
+
   const { data } = await supabase.auth.getUser();
   return data?.user || null;
 }
@@ -31,7 +39,7 @@ export async function getCurrentUser() {
 // Obtener rol del usuario
 export async function getUserRole() {
   const user = await getCurrentUser();
-  return user?.user_metadata?.role || null;
+  return resolveUserRole(user);
 }
 
 // Verificar si hay sesión activa

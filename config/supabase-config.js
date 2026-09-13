@@ -1,15 +1,21 @@
 // config/supabase-config.js
 // Configuración segura para el cliente Supabase en AsuGusto
 
-// IMPORTANTE:
-// Solo se exponen claves públicas (ANON KEY) en el frontend.
-// Las claves SERVICE ROLE JAMÁS deben estar en el navegador.
+const ENV = typeof process !== "undefined" ? process.env : {};
 
-// Variables de entorno públicas para el frontend
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const APP_ENV = (typeof import.meta !== "undefined" && import.meta.env?.MODE) || ENV.NODE_ENV || "development";
+export const ENABLE_LOGS = APP_ENV !== "production";
 
-// Validación mínima para evitar errores silenciosos
+export const SUPABASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
+  ENV.VITE_SUPABASE_URL ||
+  "";
+
+export const SUPABASE_ANON_KEY =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
+  ENV.VITE_SUPABASE_ANON_KEY ||
+  "";
+
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error("[Supabase Config] Faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en el entorno.");
 }

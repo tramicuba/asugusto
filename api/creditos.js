@@ -81,16 +81,26 @@ export async function eliminarCredito(id) {
   const user = await getCurrentUser();
   requierePermiso(user, "gestionar_creditos");
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("creditos")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select();
 
   if (error) {
     throw new Error("Error al eliminar crédito.");
   }
 
-  return { success: true };
+  return data?.[0] ?? { id };
+}
+
+function mapCreditoRpcParams(params = {}) {
+  return {
+    p_usuario_id: params.usuario_id,
+    p_monto: params.monto,
+    p_descripcion: params.descripcion,
+    ...params
+  };
 }
 
 // RPC: sumar crédito
@@ -98,7 +108,7 @@ export async function sumarCredito(params) {
   const user = await getCurrentUser();
   requierePermiso(user, "gestionar_creditos");
 
-  const { data, error } = await supabase.rpc("sumar_credito", params);
+  const { data, error } = await supabase.rpc("sumar_credito", mapCreditoRpcParams(params));
 
   if (error) {
     throw new Error("Error al sumar crédito.");
@@ -112,7 +122,7 @@ export async function restarCredito(params) {
   const user = await getCurrentUser();
   requierePermiso(user, "gestionar_creditos");
 
-  const { data, error } = await supabase.rpc("restar_credito", params);
+  const { data, error } = await supabase.rpc("restar_credito", mapCreditoRpcParams(params));
 
   if (error) {
     throw new Error("Error al restar crédito.");

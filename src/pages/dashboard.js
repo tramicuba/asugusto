@@ -4,6 +4,10 @@
 import { supabase } from "../services/supabase.js";
 import { tienePermiso } from "../../lib/permissions.js";
 
+function resolveUserRole(user) {
+  return user?.user_metadata?.role ?? user?.app_metadata?.role ?? user?.role ?? user?.rol ?? "Sin rol";
+}
+
 export async function renderDashboardPage(app) {
   // Obtener usuario actual
   const { data } = await supabase.auth.getUser();
@@ -16,7 +20,7 @@ export async function renderDashboardPage(app) {
 
   // Datos del usuario
   const telefono = user.phone || "Sin teléfono";
-  const rol = user.user_metadata?.role || "Sin rol";
+  const rol = resolveUserRole(user);
 
   // Construir menú dinámico según permisos
   const menu = [];

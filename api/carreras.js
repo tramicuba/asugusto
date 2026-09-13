@@ -81,16 +81,28 @@ export async function eliminarCarrera(id) {
   const user = await getCurrentUser();
   requierePermiso(user, "gestionar_carreras");
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("carreras")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select();
 
   if (error) {
     throw new Error("Error al eliminar carrera.");
   }
 
-  return { success: true };
+  return data?.[0] ?? { id };
+}
+
+function mapCarreraRpcParams(params = {}) {
+  return {
+    p_chofer_id: params.chofer_id,
+    p_origen: params.origen,
+    p_destino: params.destino,
+    p_precio: params.precio,
+    p_zona: params.zona,
+    ...params
+  };
 }
 
 // Crear carrera automáticamente (RPC requerido por las pruebas)
@@ -98,7 +110,8 @@ export async function crearCarreraAuto(params) {
   const user = await getCurrentUser();
   requierePermiso(user, "gestionar_carreras");
 
-  const { data, error } = await supabase.rpc("crear_carrera_auto", params);
+  const payload = mapCarreraRpcParams(params);
+  const { data, error } = await supabase.rpc("crear_carrera_auto", payload);
 
   if (error) {
     throw new Error("Error al crear carrera automáticamente.");

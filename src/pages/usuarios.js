@@ -94,8 +94,11 @@ export async function renderUsuariosPage(app) {
       <div class="modal-content">
         <h3>Crear Usuario</h3>
 
+        <label>Nombre</label>
+        <input id="nuevo-nombre" type="text" required />
+
         <label>Teléfono</label>
-        <input id="nuevo-telefono" type="text" />
+        <input id="nuevo-telefono" type="text" required />
 
         <label>Rol</label>
         <select id="nuevo-rol">
@@ -112,11 +115,17 @@ export async function renderUsuariosPage(app) {
     document.getElementById("cerrar-modal").onclick = cerrarModal;
 
     document.getElementById("guardar-nuevo").onclick = async () => {
+      const nombre = document.getElementById("nuevo-nombre").value.trim();
       const telefono = document.getElementById("nuevo-telefono").value.trim();
       const rol = document.getElementById("nuevo-rol").value;
 
+      if (!nombre || !telefono || !rol) {
+        alert("Nombre, teléfono y rol son obligatorios.");
+        return;
+      }
+
       try {
-        await crearUsuario({ telefono, rol });
+        await crearUsuario({ nombre, telefono, rol });
         alert("Usuario creado con éxito.");
         window.location.hash = "#/usuarios";
       } catch (err) {
@@ -136,8 +145,11 @@ export async function renderUsuariosPage(app) {
         <div class="modal-content">
           <h3>Editar Usuario</h3>
 
+          <label>Nombre</label>
+          <input id="edit-nombre" type="text" value="${usuario.nombre || ""}" required />
+
           <label>Teléfono</label>
-          <input id="edit-telefono" type="text" value="${usuario.telefono}" />
+          <input id="edit-telefono" type="text" value="${usuario.telefono || ""}" required />
 
           <label>Rol</label>
           <select id="edit-rol">
@@ -154,11 +166,17 @@ export async function renderUsuariosPage(app) {
       document.getElementById("cerrar-modal").onclick = cerrarModal;
 
       document.getElementById("guardar-edit").onclick = async () => {
+        const nombre = document.getElementById("edit-nombre").value.trim();
         const telefono = document.getElementById("edit-telefono").value.trim();
         const rol = document.getElementById("edit-rol").value;
 
+        if (!nombre || !telefono || !rol) {
+          alert("Nombre, teléfono y rol son obligatorios.");
+          return;
+        }
+
         try {
-          await actualizarUsuario(id, { telefono, rol });
+          await actualizarUsuario(id, { nombre, telefono, rol });
           alert("Usuario actualizado con éxito.");
           window.location.hash = "#/usuarios";
         } catch (err) {
