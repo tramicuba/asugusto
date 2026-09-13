@@ -1,72 +1,108 @@
 // api/carreras.js
-// API interna para gestionar carreras en AsuGusto
+// API de carreras para AsuGusto usando Supabase
 
-import { supabase } from "../services/supabase.js";
+import { supabase } from "../src/services/supabase.js";
+import { getCurrentUser } from "../src/services/auth.js";
+import { requierePermiso } from "../lib/permissions.js";
 
-/**
- * Obtener todas las carreras
- */
+// Obtener todas las carreras
 export async function obtenerCarreras() {
-    const { data, error } = await supabase
-        .from("carreras")
-        .select("*");
+  const user = await getCurrentUser();
+  requierePermiso(user, "gestionar_carreras");
 
-    if (error) {
-        console.error("Error obteniendo carreras:", error);
-        throw error;
-    }
+  const { data, error } = await supabase
+    .from("carreras")
+    .select("*");
 
-    return data;
+  if (error) {
+    throw new Error("Error al obtener carreras.");
+  }
+
+  return data;
 }
 
-/**
- * Crear una nueva carrera
- */
+// Obtener carrera por ID
+export async function obtenerCarreraPorId(id) {
+  const user = await getCurrentUser();
+  requierePermiso(user, "gestionar_carreras");
+
+  const { data, error } = await supabase
+    .from("carreras")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    throw new Error("Carrera no encontrada.");
+  }
+
+  return data;
+}
+
+// Crear carrera manual
 export async function crearCarrera(carrera) {
-    const { data, error } = await supabase
-        .from("carreras")
-        .insert([carrera]);
+  const user = await getCurrentUser();
+  requierePermiso(user, "gestionar_carreras");
 
-    if (error) {
-        console.error("Error creando carrera:", error);
-        throw error;
-    }
+  const { data, error } = await supabase
+    .from("carreras")
+    .insert(carrera)
+    .select()
+    .single();
 
-    return data;
+  if (error) {
+    throw new Error("Error al crear carrera.");
+  }
+
+  return data;
 }
 
-/**
- * Actualizar una carrera por ID
- */
+// Actualizar carrera
 export async function actualizarCarrera(id, cambios) {
-    const { data, error } = await supabase
-        .from("carreras")
-        .update(cambios)
-        .eq("id", id);
+  const user = await getCurrentUser();
+  requierePermiso(user, "gestionar_carreras");
 
-    if (error) {
-        console.error("Error actualizando carrera:", error);
-        throw error;
-    }
+  const { data, error } = await supabase
+    .from("carreras")
+    .update(cambios)
+    .eq("id", id)
+    .select()
+    .single();
 
-    return data;
+  if (error) {
+    throw new Error("Error al actualizar carrera.");
+  }
+
+  return data;
 }
 
-/**
- * Eliminar una carrera por ID
- */
+// Eliminar carrera
 export async function eliminarCarrera(id) {
-    const { data, error } = await supabase
-        .from("carreras")
-        .delete()
-        .eq("id", id);
+  const user = await getCurrentUser();
+  requierePermiso(user, "gestionar_carreras");
 
-    if (error) {
-        console.error("Error eliminando carrera:", error);
-        throw error;
-    }
+  const { error } = await supabase
+    .from("carreras")
+    .delete()
+    .eq("id", id);
 
-    return data;
+  if (error) {
+    throw new Error("Error al eliminar carrera.");
+  }
+
+  return { success: true };
 }
 
-console.log("API de carreras cargada correctamente.");
+// Crear carrera automáticamente (RPC requerido por las pruebas)
+export async function crearCarreraAuto(params) {
+  const user = await getCurrentUser();
+  requierePermiso(user, "gestionar_carreras");
+
+  const { data, error } = await supabase.rpc("crear_carrera_auto", params);
+
+  if (error) {
+    throw new Error("Error al crear carrera automáticamente.");
+  }
+
+  return data;
+}
