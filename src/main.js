@@ -1,13 +1,10 @@
 // src/main.js
-// Punto de entrada inicial de la aplicación
+// Punto de entrada principal de AsuGusto
 
-import { iniciarApp } from './app.js';
-import { cargarRutas } from './router.js';
+import { initRouter } from "./router.js";
 
-// Cuando el DOM esté listo, iniciamos la aplicación
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('AsuGusto iniciado...');
-    
-    cargarRutas();   // Configura las rutas
-    iniciarApp();    // Renderiza la app en #app
-});
+// Selecciona el contenedor principal donde se renderizará la app
+const app = document.getElementById("app");
+
+// Inicializa el router y la aplicación
+initRouter(app);

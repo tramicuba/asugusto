@@ -1,57 +1,41 @@
 // src/services/auth.js
-// Servicio de autenticación para AsuGusto
+// Servicio de autenticación real usando Supabase
 
-import { supabaseCliente } from './supabase.js';
+import { supabase } from "./supabase.js";
 
-// --- Autenticación simulada temporal (hasta conectar Supabase) ---
-const usuariosSimulados = [
-    { telefono: "53555555", password: "123456", rol: "admin" },
-    { telefono: "53444444", password: "111111", rol: "gestor" },
-    { telefono: "53333333", password: "222222", rol: "chofer" }
-];
-
-// --- Login con Supabase (cuando esté listo) ---
+// Iniciar sesión con teléfono y contraseña
 export async function login(telefono, password) {
-    console.log("Intentando login…");
+  const { data, error } = await supabase.auth.signInWithPassword({
+    phone: telefono,
+    password: password
+  });
 
-    // Modo simulado temporal
-    const usuario = usuariosSimulados.find(
-        u => u.telefono === telefono && u.password === password
-    );
+  if (error) {
+    throw new Error("Credenciales incorrectas.");
+  }
 
-    if (usuario) {
-        console.log("Login exitoso (simulado):", usuario);
-        return {
-            exito: true,
-            rol: usuario.rol,
-            mensaje: "Acceso concedido"
-        };
-    }
-
-    return {
-        exito: false,
-        mensaje: "Credenciales incorrectas"
-    };
-
-    /*
-    // --- Versión real con Supabase (cuando activemos supabase.js) ---
-    const { data, error } = await supabaseCliente
-        .from('usuarios')
-        .select('*')
-        .eq('telefono', telefono)
-        .eq('password', password)
-        .single();
-
-    if (error || !data) {
-        return { exito: false, mensaje: "Credenciales incorrectas" };
-    }
-
-    return { exito: true, rol: data.rol, mensaje: "Acceso concedido" };
-    */
+  return data;
 }
 
-// --- Logout ---
-export function logout() {
-    console.log("Sesión cerrada");
-    window.location.hash = "#login";
+// Cerrar sesión
+export async function logout() {
+  await supabase.auth.signOut();
+}
+
+// Obtener usuario actual
+export async function getCurrentUser() {
+  const { data } = await supabase.auth.getUser();
+  return data?.user || null;
+}
+
+// Obtener rol del usuario
+export async function getUserRole() {
+  const user = await getCurrentUser();
+  return user?.user_metadata?.role || null;
+}
+
+// Verificar si hay sesión activa
+export async function isAuthenticated() {
+  const user = await getCurrentUser();
+  return !!user;
 }

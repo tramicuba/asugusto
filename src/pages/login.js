@@ -1,45 +1,60 @@
 // src/pages/login.js
-// Página de inicio de sesión para AsuGusto
+// Página de Login con autenticación real usando Supabase
 
-export function paginaLogin() {
-    return `
-        <div class="login-container">
-            <h1>AsuGusto</h1>
-            <h3>Acceso al sistema</h3>
+import { supabase } from "../services/supabase.js";
 
-            <form id="form-login" class="login-form">
-                <label>Teléfono</label>
-                <input type="text" id="login-telefono" placeholder="Ej: 53555555" required>
+export function renderLoginPage(app) {
+  app.innerHTML = `
+    <div class="login-container">
+      <h2>Iniciar Sesión</h2>
 
-                <label>Contraseña</label>
-                <input type="password" id="login-password" placeholder="••••••••" required>
+      <form id="login-form">
+        <label for="telefono">Teléfono</label>
+        <input type="text" id="telefono" placeholder="+53 50000000" required />
 
-                <button type="submit">Entrar</button>
-            </form>
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" placeholder="••••••••" required />
 
-            <p class="login-info">
-                Plataforma de gestión para administradores, gestores y choferes.
-            </p>
-        </div>
+        <button type="submit" class="login-btn">Entrar</button>
 
-        <script>
-            document.getElementById('form-login').addEventListener('submit', (e) => {
-                e.preventDefault();
+        <p id="login-error" class="error-msg"></p>
+      </form>
+    </div>
+  `;
 
-                const telefono = document.getElementById('login-telefono').value.trim();
-                const password = document.getElementById('login-password').value.trim();
+  const form = document.getElementById("login-form");
+  const errorMsg = document.getElementById("login-error");
 
-                if (!telefono || !password) {
-                    alert('Debe completar todos los campos');
-                    return;
-                }
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorMsg.textContent = "";
 
-                // Aquí luego conectamos con Supabase
-                console.log('Intentando iniciar sesión con:', telefono);
+    const telefono = document.getElementById("telefono").value.trim();
+    const password = document.getElementById("password").value.trim();
 
-                // Redirigir temporalmente al dashboard
-                window.location.hash = '#dashboard';
-            });
-        </script>
-    `;
+    if (!telefono || !password) {
+      errorMsg.textContent = "Debe completar todos los campos.";
+      return;
+    }
+
+    try {
+      // Autenticación real con Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        phone: telefono,
+        password: password
+      });
+
+      if (error) {
+        errorMsg.textContent = "Credenciales incorrectas.";
+        return;
+      }
+
+      // Sesión válida → redirigir al dashboard
+      window.location.hash = "#/dashboard";
+
+    } catch (err) {
+      console.error("[Login Error]", err);
+      errorMsg.textContent = "Error inesperado. Intente nuevamente.";
+    }
+  });
 }

@@ -1,38 +1,64 @@
 // src/router.js
-// Sistema de rutas para la aplicación AsuGusto
+// Router seguro con validación de sesión y permisos
 
-// Importar páginas
-import { paginaLogin } from './pages/login.js';
-import { paginaDashboard } from './pages/dashboard.js';
-import { paginaChoferes } from './pages/choferes.js';
-import { paginaGestores } from './pages/gestores.js';
-import { paginaAdministradores } from './pages/administradores.js';
-import { paginaReportes } from './pages/reportes.js';
-import { paginaCarreras } from './pages/carreras.js';
+import { supabase } from "./services/supabase.js";
+import { renderLoginPage } from "./pages/login.js";
+import { renderDashboardPage } from "./pages/dashboard.js";
+import { tienePermiso } from "./lib/permissions.js";
 
-// Definición de rutas
-const rutas = {
-    '': paginaLogin,
-    'login': paginaLogin,
-    'dashboard': paginaDashboard,
-    'choferes': paginaChoferes,
-    'gestores': paginaGestores,
-    'administradores': paginaAdministradores,
-    'reportes': paginaReportes,
-    'carreras': paginaCarreras
+// Mapa de rutas → funciones de renderizado
+const routes = {
+  "/login": renderLoginPage,
+  "/dashboard": renderDashboardPage
 };
 
-// Obtener la ruta actual del hash
-export function obtenerRutaActual() {
-    return window.location.hash.replace('#', '') || '';
+// Obtiene el usuario actual desde Supabase
+async function getCurrentUser() {
+  const { data } = await supabase.auth.getUser();
+  return data?.user || null;
 }
 
-// Cargar la página correspondiente
-export function cargarPagina(ruta) {
-    return rutas[ruta] ? rutas[ruta]() : null;
+// Renderiza la ruta actual
+async function renderRoute(app) {
+  const hash = window.location.hash || "#/login";
+  const path = hash.replace("#", "");
+
+  const user = await getCurrentUser();
+
+  // Si no hay usuario y no estamos en login → redirigir
+  if (!user && path !== "/login") {
+    window.location.hash = "#/login";
+    return;
+  }
+
+  // Si hay usuario pero intenta ir a login → redirigir a dashboard
+  if (user && path === "/login") {
+    window.location.hash = "#/dashboard";
+    return;
+  }
+
+  // Validación de permisos (solo dashboard por ahora)
+  if (path === "/dashboard") {
+    const puedeEntrar = tienePermiso(user, "ver_dashboard");
+
+    if (!puedeEntrar) {
+      app.innerHTML = `<p>No tiene permisos para acceder al dashboard.</p>`;
+      return;
+    }
+  }
+
+  // Renderizar la página correspondiente
+  const renderFn = routes[path];
+
+  if (renderFn) {
+    renderFn(app);
+  } else {
+    app.innerHTML = `<p>Ruta no encontrada: ${path}</p>`;
+  }
 }
 
-// Inicializar rutas (si necesitas lógica adicional)
-export function cargarRutas() {
-    console.log('Rutas cargadas correctamente');
+// Inicializa el router
+export function initRouter(app) {
+  window.addEventListener("hashchange", () => renderRoute(app));
+  renderRoute(app);
 }
