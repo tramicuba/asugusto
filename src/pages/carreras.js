@@ -1,96 +1,111 @@
 // src/pages/carreras.js
-// Gestión de carreras realizadas por los choferes
+// Página de gestión de carreras para AsuGusto
 
-export function paginaCarreras() {
-    return `
-        <div class="page-container">
-            <h2>Carreras</h2>
-            <p>Registro y control de las carreras realizadas por los choferes.</p>
+import { obtenerCarreras, crearCarreraAuto, crearCarrera } from "../../api/carreras.js";
+import { supabase } from "../services/supabase.js";
+import { tienePermiso } from "../../lib/permissions.js";
 
-            <div class="carreras-actions">
-                <button id="btn-recargar-carreras" class="btn-primary">Recargar lista</button>
-                <button id="btn-agregar-carrera" class="btn-secondary">Agregar carrera</button>
-            </div>
+export async function renderCarrerasPage(app) {
+  // Obtener usuario actual
+  const { data } = await supabase.auth.getUser();
+  const user = data?.user || null;
 
-            <table class="tabla-carreras">
-                <thead>
-                    <tr>
-                        <th>Chofer</th>
-                        <th>Origen</th>
-                        <th>Destino</th>
-                        <th>Distancia (km)</th>
-                        <th>Precio</th>
-                        <th>Fecha</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="lista-carreras">
-                    <tr>
-                        <td colspan="7" style="text-align:center; padding:20px;">
-                            Cargando carreras...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+  if (!user) {
+    app.innerHTML = `<p>Error: no se pudo obtener la sesión del usuario.</p>`;
+    return;
+  }
 
-            <script>
-                // Datos simulados temporalmente
-                const carreras = [
-                    {
-                        chofer: "Juan Pérez",
-                        origen: "Vedado",
-                        destino: "Playa",
-                        distancia: 12,
-                        precio: 350,
-                        fecha: "2026-09-10"
-                    },
-                    {
-                        chofer: "Mario López",
-                        origen: "Centro Habana",
-                        destino: "Habana Vieja",
-                        distancia: 4,
-                        precio: 120,
-                        fecha: "2026-09-11"
-                    }
-                ];
+  // Validar permisos
+  if (!tienePermiso(user, "gestionar_carreras")) {
+    app.innerHTML = `<p>No tiene permisos para gestionar carreras.</p>`;
+    return;
+  }
 
-                function cargarCarreras() {
-                    const tabla = document.getElementById('lista-carreras');
+  // Obtener carreras reales
+  let carreras = [];
+  try {
+    carreras = await obtenerCarreras();
+  } catch (err) {
+    console.error(err);
+    carreras = [];
+  }
 
-                    if (!tabla) return;
+  // Render principal
+  app.innerHTML = `
+    <div class="carreras-container">
+      <h2>Gestión de Carreras</h2>
 
-                    if (carreras.length === 0) {
-                        tabla.innerHTML = "<tr><td colspan='7'>No hay carreras registradas.</td></tr>";
-                        return;
-                    }
+      <div class="carreras-actions">
+        <button id="crear-auto" class="menu-btn">Crear Carrera Automática</button>
+        <button id="crear-manual" class="menu-btn">Crear Carrera Manual</button>
+        <button id="volver-dashboard" class="menu-btn">Volver al Dashboard</button>
+      </div>
 
-                    tabla.innerHTML = carreras.map(c => `
-                        <tr>
-                            <td>${c.chofer}</td>
-                            <td>${c.origen}</td>
-                            <td>${c.destino}</td>
-                            <td>${c.distancia} km</td>
-                            <td>$${c.precio}</td>
-                            <td>${c.fecha}</td>
-                            <td>
-                                <button class="btn-small">Ver</button>
-                                <button class="btn-small">Editar</button>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-
-                document.getElementById('btn-recargar-carreras').addEventListener('click', () => {
-                    cargarCarreras();
-                });
-
-                document.getElementById('btn-agregar-carrera').addEventListener('click', () => {
-                    alert('Aquí luego abriremos el formulario para agregar carreras.');
-                });
-
-                // Cargar al entrar
-                cargarCarreras();
-            </script>
+      <div class="carreras-list">
+        <h3>Listado de Carreras</h3>
+        <div id="carreras-items">
+          ${carreras.length === 0 ? "<p>No hay carreras registradas.</p>" : ""}
         </div>
+      </div>
+    </div>
+  `;
+
+  // Insertar carreras en la lista
+  const listContainer = document.getElementById("carreras-items");
+
+  carreras.forEach(c => {
+    const item = document.createElement("div");
+    item.className = "carrera-item";
+    item.innerHTML = `
+      <p><strong>ID:</strong> ${c.id}</p>
+      <p><strong>Cliente:</strong> ${c.cliente || "N/A"}</p>
+      <p><strong>Origen:</strong> ${c.origen || "N/A"}</p>
+      <p><strong>Destino:</strong> ${c.destino || "N/A"}</p>
+      <p><strong>Estado:</strong> ${c.estado || "N/A"}</p>
     `;
+    listContainer.appendChild(item);
+  });
+
+  // Botón: Crear carrera automática
+  const btnAuto = document.getElementById("crear-auto");
+  btnAuto.addEventListener("click", async () => {
+    try {
+      const nueva = await crearCarreraAuto({
+        cliente: "Auto",
+        origen: "Punto A",
+        destino: "Punto B"
+      });
+
+      alert("Carrera automática creada con éxito.");
+      window.location.hash = "#/carreras";
+    } catch (err) {
+      console.error(err);
+      alert("Error al crear carrera automática.");
+    }
+  });
+
+  // Botón: Crear carrera manual
+  const btnManual = document.getElementById("crear-manual");
+  btnManual.addEventListener("click", async () => {
+    try {
+      const nueva = await crearCarrera({
+        cliente: "Manual",
+        origen: "Origen manual",
+        destino: "Destino manual",
+        estado: "pendiente"
+      });
+
+      alert("Carrera manual creada con éxito.");
+      window.location.hash = "#/carreras";
+    } catch (err) {
+      console.error(err);
+      alert("Error al crear carrera manual.");
+    }
+  });
+
+  // Botón: Volver al dashboard
+  const btnVolver = document.getElementById("volver-dashboard");
+  btnVolver.addEventListener("click", () => {
+    window.location.hash = "#/dashboard";
+  });
 }
