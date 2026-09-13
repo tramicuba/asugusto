@@ -15,13 +15,6 @@ export function renderRegisterPage(app) {
         <label for="password">Contraseña</label>
         <input type="password" id="password" placeholder="••••••••" required />
 
-        <label for="rol">Rol</label>
-        <select id="rol" required>
-          <option value="chofer">Chofer</option>
-          <option value="gestor">Gestor</option>
-          <option value="administrador">Administrador</option>
-        </select>
-
         <button type="submit" class="register-btn">Crear Cuenta</button>
 
         <p id="register-error" class="error-msg"></p>
@@ -38,21 +31,20 @@ export function renderRegisterPage(app) {
 
     const telefono = document.getElementById("telefono").value.trim();
     const password = document.getElementById("password").value.trim();
-    const rol = document.getElementById("rol").value;
 
-    if (!telefono || !password || !rol) {
+    if (!telefono || !password) {
       errorMsg.textContent = "Debe completar todos los campos.";
       return;
     }
 
     try {
-      // Registro real con Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
+      // El rol administrativo solo debe asignarse desde un backend seguro.
+      const { error } = await supabase.auth.signUp({
         phone: telefono,
         password: password,
         options: {
           data: {
-            role: rol
+            role: "chofer"
           }
         }
       });
@@ -63,9 +55,7 @@ export function renderRegisterPage(app) {
         return;
       }
 
-      // Redirigir al login
       window.location.hash = "#/login";
-
     } catch (err) {
       console.error("[Register Error]", err);
       errorMsg.textContent = "Error inesperado. Intente nuevamente.";

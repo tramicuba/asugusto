@@ -4,7 +4,7 @@
 import * as carrerasAPI from "../api/carreras.js";
 
 // Mock del cliente Supabase
-jest.mock("../services/supabase.js", () => ({
+jest.mock("../src/services/supabase.js", () => ({
   supabase: {
     from: jest.fn(() => ({
       select: jest.fn(),
@@ -16,7 +16,7 @@ jest.mock("../services/supabase.js", () => ({
   }
 }));
 
-const { supabase } = require("../services/supabase.js");
+const { supabase } = require("../src/services/supabase.js");
 
 describe("API: Carreras", () => {
 

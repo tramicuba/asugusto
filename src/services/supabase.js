@@ -3,14 +3,20 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-// Variables de entorno seguras (solo ANON KEY en frontend)
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const ENV = typeof process !== "undefined" ? process.env : {};
 
-// Validación mínima para evitar errores silenciosos
+const SUPABASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
+  ENV.VITE_SUPABASE_URL ||
+  "";
+
+const SUPABASE_ANON_KEY =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
+  ENV.VITE_SUPABASE_ANON_KEY ||
+  "";
+
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error("[Supabase] Faltan variables de entorno VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY");
 }
 
-// Cliente Supabase único para toda la app
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL || "https://placeholder.supabase.co", SUPABASE_ANON_KEY || "anon-key");

@@ -81,14 +81,15 @@ export async function eliminarUsuario(id) {
   const user = await getCurrentUser();
   requierePermiso(user, "gestionar_usuarios");
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("usuarios")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select();
 
   if (error) {
     throw new Error("Error al eliminar usuario.");
   }
 
-  return { success: true };
+  return data?.[0] ?? { id };
 }
