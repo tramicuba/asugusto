@@ -1,0 +1,246 @@
+REPORTE DE DIAGNOSTICO DEL PROYECTO ASUGUSTO
+Fecha: 2026-09-12
+
+1. RESUMEN EJECUTIVO
+
+El proyecto se encuentra en un estado incompleto y actualmente no puede ejecutarse de extremo a extremo. Los principales problemas son:
+
+- La aplicacion no arranca correctamente desde index.html.
+- Existen imports hacia archivos y carpetas que no existen.
+- Hay dos arquitecturas Supabase mezcladas.
+- La autenticacion actual es simulada y puede permitir acceso sin validar credenciales.
+- Las politicas RLS no estan alineadas con el modelo de usuarios.
+- Las APIs, las pruebas y las funciones SQL tienen contratos incompatibles.
+- No existe package.json, sistema de build ni configuracion ejecutable de Jest.
+
+No se modificaron archivos durante la auditoria.
+
+2. LIMITACIONES DE LA AUDITORIA
+
+La revision fue estatica. No fue posible ejecutar la aplicacion, las pruebas ni el build porque el entorno no dispone de Node.js, npm, npx ni Jest. Tampoco existe package.json ni configuracion de bundler o pruebas en el repositorio.
+
+3. BLOQUEADORES CRITICOS
+
+3.1 La aplicacion no arranca desde index.html
+
+index.html carga src/main.js, src/app.js y src/router.js como scripts clasicos. Esos archivos contienen import y export, por lo que el navegador produce un error de sintaxis y no inicializa la aplicacion.
+
+Ademas, main.js ya importa app.js y router.js. Solo deberia cargarse un punto de entrada como modulo:
+
+<script type="module" src="src/main.js"></script>
+
+Archivo afectado: index.html
+
+3.2 Imports hacia rutas inexistentes
+
+Los siguientes archivos importan ../services/supabase.js, pero no existe services/ en la raiz del proyecto:
+
+- api/carreras.js
+- api/creditos.js
+- hooks/useAuth.js
+- tests/auth.test.js
+- tests/carreras.test.js
+- tests/creditos.test.js
+
+El servicio existente esta en src/services/supabase.js.
+
+3.3 Exportacion incompatible del cliente Supabase
+
+src/services/supabase.js exporta supabaseCliente, mientras api/carreras.js, api/creditos.js y hooks/useAuth.js esperan importar supabase.
+
+3.4 Falta api/usuarios.js
+
+tests/usuarios.test.js importa api/usuarios.js, pero ese archivo no existe.
+
+3.5 No existe infraestructura de Node
+
+Faltan package.json, dependencias, configuracion de Jest y configuracion de build. Por tanto, las pruebas y el build no tienen una forma definida de ejecutarse.
+
+4. SEGURIDAD Y AUTENTICACION
+
+4.1 El login no autentica realmente
+
+src/pages/login.js solo comprueba que telefono y password no esten vacios y despues redirige a dashboard. No llama a Supabase ni a src/services/auth.js.
+
+4.2 Credenciales simuladas en el codigo
+
+src/services/auth.js contiene usuarios y contrasenas de prueba hardcodeados. La autenticacion real esta comentada.
+
+4.3 El script inline del login puede no ejecutarse
+
+La pagina de login se genera como una cadena y se inserta mediante innerHTML. Los scripts incluidos en ese HTML no se ejecutan como scripts normales. El listener del formulario debe registrarse desde codigo JavaScript despues de renderizar la vista.
+
+4.4 El router no valida sesion ni permisos
+
+src/router.js permite navegar directamente a dashboard, choferes, gestores, administradores, reportes y carreras sin comprobar identidad ni rol.
+
+4.5 El sistema de permisos no esta conectado
+
+lib/permissions.js define tienePermiso y requierePermiso, pero el router y las paginas no los utilizan.
+
+4.6 Roles inconsistentes
+
+El esquema y los permisos usan administrador, mientras el login simulado usa admin. Esto puede dejar a usuarios administradores sin permisos.
+
+4.7 Riesgo por variable de service role
+
+config/supabase-config.js define SUPABASE_SERVICE_ROLE_KEY con prefijo VITE_. Las variables VITE_ se exponen al frontend. Una service role key nunca debe llegar al navegador.
+
+4.8 Clientes Supabase duplicados
+
+Existen dos implementaciones incompatibles:
+
+- src/services/supabase.js usa una URL CDN y credenciales hardcodeadas.
+- hooks/useSupabase.js usa @supabase/supabase-js y variables VITE_.
+
+Debe mantenerse una sola fuente de configuracion y un solo cliente.
+
+5. BASE DE DATOS Y RLS
+
+5.1 Contradiccion entre NOT NULL y ON DELETE SET NULL
+
+En database/schema.sql, carreras.chofer_id esta definido como NOT NULL, pero la relacion usa ON DELETE SET NULL. El borrado de un chofer provocara una violacion de nulabilidad.
+
+5.2 Roles JWT no configurados
+
+supabase/policies.sql consulta auth.jwt() ->> 'role' esperando valores administrador, gestor o chofer. No existe en el repositorio ninguna configuracion que agregue esos roles de negocio al JWT.
+
+5.3 auth.uid() no esta relacionado con usuarios.id
+
+usuarios.id se genera con gen_random_uuid() y no tiene relacion con auth.users(id). Las politicas que comparan auth.uid() con usuarios.id pueden no identificar al usuario correcto.
+
+5.4 Politicas incompletas
+
+Las APIs exponen operaciones de insercion, actualizacion y eliminacion, pero las politicas no cubren todas esas operaciones para choferes, gestores, administradores y creditos.
+
+5.5 Funcion SQL ambigua
+
+supabase/functions.sql contiene:
+
+WHERE zona = zona
+
+El parametro y la columna tienen el mismo nombre. La condicion puede ser ambigua o convertirse en una condicion siempre verdadera, asignando gestores de zonas incorrectas.
+
+5.6 RPC sin autorizacion explicita
+
+Las funciones sumar_credito, restar_credito y crear_carrera_auto insertan datos sin comprobar explicitamente el rol o el usuario que las invoca.
+
+5.7 Auditoria SECURITY DEFINER incompleta
+
+La funcion registrar_auditoria() usa SECURITY DEFINER, pero no fija search_path. Debe endurecerse para evitar resoluciones de objetos no controladas.
+
+5.8 SQL no idempotente
+
+CREATE TYPE, CREATE TABLE y CREATE TRIGGER no estan preparados para ejecutarse repetidamente. Reaplicar los scripts puede fallar si los objetos ya existen.
+
+6. APIs Y CONTRATOS
+
+6.1 Falta crearCarreraAuto en la API
+
+tests/carreras.test.js espera api/carreras.js.crearCarreraAuto(), pero la API solo contiene operaciones CRUD basicas. La funcion SQL existe, pero no su wrapper JavaScript.
+
+6.2 Resultados de Supabase tratados como objetos
+
+Las APIs devuelven directamente data. En inserciones y actualizaciones, Supabase normalmente devuelve arrays o null. Las pruebas esperan resultado.id, por lo que el contrato no coincide.
+
+6.3 Las inserciones no solicitan retorno
+
+api/carreras.js y api/creditos.js llaman insert() sin select(). No se garantiza que data contenga el registro creado.
+
+6.4 Mocks defectuosos
+
+Las pruebas crean un nuevo objeto cada vez que se llama supabase.from(). El objeto configurado en el test puede no ser el mismo que utiliza la implementacion productiva.
+
+6.5 Servicios sin integrar
+
+src/services/creditos.js esta vacio y varias paginas utilizan datos simulados en lugar de consumir APIs o servicios Supabase.
+
+7. PRUEBAS
+
+7.1 Logger
+
+tests/logger.test.js importa logInfo, logWarn y logError, pero lib/logger.js exporta info, warn, error y debug.
+
+7.2 Permisos
+
+tests/permissions.test.js importa puedeVerDashboard, puedeGestionarCarreras, puedeGestionarCreditos y puedeGestionarUsuarios, pero lib/permissions.js solo exporta tienePermiso y requierePermiso.
+
+7.3 Usuarios
+
+tests/usuarios.test.js referencia un archivo inexistente.
+
+7.4 Carreras
+
+La prueba de crearCarreraAuto espera una funcion inexistente. Otras pruebas esperan objetos cuando las APIs pueden devolver arrays.
+
+7.5 Estado de ejecucion
+
+Las pruebas no pudieron ejecutarse por falta de Node/npm/Jest y porque no existe package.json.
+
+8. BUILD Y DESPLIEGUE
+
+8.1 Build no configurado
+
+scripts/build.sh y scripts/deploy.sh ejecutan npm run build, pero no existe package.json ni un script build.
+
+8.2 Flujo Supabase no preparado
+
+scripts/deploy.sh intenta ejecutar supabase db push --file sobre SQL suelto. El repositorio no contiene una estructura de migraciones Supabase que respalde ese flujo.
+
+8.3 Compatibilidad con Windows
+
+Los scripts son Bash. El entorno actual es Windows y no hay evidencia de Git Bash, WSL o una alternativa configurada.
+
+9. FRONTEND Y ESTILOS
+
+9.1 CSS no conectado
+
+index.html no enlaza styles/login.css ni styles/dashboard.css.
+
+9.2 Clases CSS incompatibles
+
+styles/login.css define login-wrapper, login-card y login-btn, mientras src/pages/login.js genera login-container, login-form y un boton sin esas clases.
+
+9.3 Manifest incompleto
+
+public/manifest.json referencia icons/icon-192.png e icons/icon-512.png, pero esos archivos no existen. El manifest tampoco se enlaza desde index.html.
+
+9.4 HTML dinamico sin escape
+
+Las paginas interpolan datos directamente dentro de innerHTML. Actualmente los datos son locales, pero al conectarse a Supabase esto puede permitir XSS si no se escapan los valores.
+
+9.5 Modelo de datos y UI incompatibles
+
+La tabla carreras contiene chofer_id, origen, destino, precio, estado y fechas, mientras la UI espera chofer, distancia y fecha. Es necesario definir un contrato unico.
+
+9.6 Validacion de telefono inconsistente
+
+src/utils/validators.js acepta formatos diferentes a los utilizados en login y en las pruebas.
+
+10. DOCUMENTACION
+
+La documentacion no refleja el estado real del proyecto:
+
+- docs/estructura.md omite paginas, servicios y pruebas existentes.
+- docs/api.md documenta rutas inexistentes como services/supabase.js.
+- La estructura documentada no coincide con los directorios actuales.
+
+11. ORDEN RECOMENDADO DE REPARACION
+
+1. Elegir una arquitectura de ejecucion: Vite/Node o HTML estatico con CDN.
+2. Crear package.json, dependencias, build y configuracion de tests.
+3. Corregir index.html y dejar un unico modulo de entrada.
+4. Unificar el cliente Supabase y corregir todas las rutas y exportaciones.
+5. Eliminar credenciales hardcodeadas y no exponer ninguna service role key.
+6. Implementar autenticacion real y gestion de sesion.
+7. Proteger router y vistas mediante permisos.
+8. Relacionar usuarios con auth.users y rediseñar las politicas RLS.
+9. Corregir la contradiccion de chofer_id y crear migraciones idempotentes.
+10. Alinear APIs, RPCs, resultados y pruebas con contratos unicos.
+11. Conectar las paginas reales con los servicios.
+12. Corregir estilos, manifest, validaciones y documentacion.
+13. Instalar Node/npm y ejecutar build y pruebas en un entorno controlado.
+
+12. CONCLUSION
+
+El proyecto sirve como base de prototipo, pero no esta listo para despliegue ni para uso con datos reales. El primer objetivo debe ser conseguir un arranque reproducible y una unica arquitectura tecnica. Despues deben resolverse autenticacion, identidad y RLS antes de conectar operaciones administrativas o creditos.
