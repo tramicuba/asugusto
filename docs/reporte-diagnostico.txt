@@ -1,5 +1,53 @@
 REPORTE DE DIAGNOSTICO DEL PROYECTO ASUGUSTO
 Fecha: 2026-09-12
+Version: Auditoria posterior a los cambios recientes
+
+0. ACTUALIZACION DE LA AUDITORIA
+
+El proyecto mejoro respecto a la auditoria anterior: ahora existe package.json, el arranque usa Vite con un unico modulo, se creo api/usuarios.js, el cliente Supabase de produccion esta unificado y las APIs incluyen permisos y select().single().
+
+Los siguientes hallazgos actuales tienen prioridad sobre el diagnostico historico que aparece mas abajo:
+
+CRITICO - Escalada de privilegios en el registro:
+src/pages/register.js permite que cualquier visitante seleccione administrador. lib/permissions.js confia en user.user_metadata.role. Un usuario puede registrarse como administrador y obtener permisos administrativos en la interfaz. El rol administrador debe asignarse unicamente desde una operacion backend segura.
+
+CRITICO - RLS y roles desalineados:
+supabase/policies.sql consulta auth.jwt() ->> 'role', mientras el frontend usa user_metadata.role. No existe configuracion visible que garantice que el claim JWT contenga los roles administrador, gestor o chofer.
+
+ALTO - Identidad incompleta:
+usuarios.id se genera con gen_random_uuid() y no esta vinculado a auth.users.id. El registro crea una cuenta Auth, pero no crea la fila correspondiente en usuarios.
+
+ALTO - Pruebas desactualizadas:
+tests/auth.test.js, tests/carreras.test.js, tests/creditos.test.js y tests/usuarios.test.js hacen mock de ../services/supabase.js, ruta inexistente. tests/permissions.test.js importa exports eliminados y usa rol en lugar de user_metadata.role. tests/auth.test.js sigue esperando el modelo OTP anterior. tests/logger.test.js importa logInfo/logWarn/logError, pero lib/logger.js exporta info/warn/error/debug.
+
+ALTO - Contrato de permisos inconsistente:
+lib/permissions.js permite a gestores gestionar creditos, pero supabase/policies.sql solo autoriza insertar y actualizar creditos a administradores.
+
+ALTO - Insercion de usuarios incompatible con SQL:
+database/schema.sql exige nombre, telefono y rol. src/pages/usuarios.js intenta crear usuarios solo con telefono y rol, por lo que fallara por nombre NOT NULL.
+
+MEDIO - SQL pendiente de correccion:
+database/schema.sql mantiene chofer_id NOT NULL con ON DELETE SET NULL. supabase/functions.sql mantiene WHERE zona = zona, RPC sin autorizacion explicita, SECURITY DEFINER sin search_path fijo y triggers no idempotentes.
+
+MEDIO - Riesgos de frontend:
+Hay valores externos interpolados con innerHTML en paginas de usuarios, carreras y creditos. Tambien existe riesgo de renderizados concurrentes porque renderRoute es async y initRouter no controla cargas antiguas.
+
+MEDIO - Recursos y despliegue:
+index.html referencia /public/manifest.json y /public/favicon.ico, rutas posiblemente incorrectas para Vite. Los scripts de build y despliegue requieren Bash y aplican SQL suelto en lugar de migraciones.
+
+VERIFICACION:
+El analizador del editor no reporta errores. No fue posible ejecutar npm run build ni npm test porque npm no esta disponible en el entorno actual. No se modifico codigo de la aplicacion durante esta auditoria.
+
+PRIORIDAD:
+1. Impedir la autoasignacion del rol administrador.
+2. Definir una fuente segura para roles y alinear Auth, usuarios y RLS.
+3. Actualizar pruebas y mocks al modelo actual.
+4. Alinear permisos de creditos, formularios y politicas.
+5. Corregir el esquema SQL, RPC y migraciones.
+6. Escapar datos dinamicos y validar recursos Vite.
+7. Instalar Node/npm y ejecutar build y pruebas.
+
+--- INICIO DEL DIAGNOSTICO HISTORICO ---
 
 1. RESUMEN EJECUTIVO
 
