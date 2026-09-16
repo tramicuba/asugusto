@@ -15,7 +15,7 @@ export async function obtenerCreditos() {
     .select("*");
 
   if (error) {
-    throw new Error("Error al obtener créditos.");
+    throw new Error(error.message || "Error al obtener créditos.");
   }
 
   return data;
@@ -51,7 +51,7 @@ export async function crearCredito(credito) {
     .single();
 
   if (error) {
-    throw new Error("Error al crear crédito.");
+    throw new Error(error.message || "Error al crear crédito.");
   }
 
   return data;
@@ -70,7 +70,7 @@ export async function actualizarCredito(id, cambios) {
     .single();
 
   if (error) {
-    throw new Error("Error al actualizar crédito.");
+    throw new Error(error.message || "Error al actualizar crédito.");
   }
 
   return data;
@@ -88,7 +88,7 @@ export async function eliminarCredito(id) {
     .select();
 
   if (error) {
-    throw new Error("Error al eliminar crédito.");
+    throw new Error(error.message || "Error al eliminar crédito.");
   }
 
   return data?.[0] ?? { id };
@@ -98,8 +98,7 @@ function mapCreditoRpcParams(params = {}) {
   return {
     p_usuario_id: params.usuario_id,
     p_monto: params.monto,
-    p_descripcion: params.descripcion,
-    ...params
+    p_descripcion: params.descripcion
   };
 }
 
@@ -111,7 +110,7 @@ export async function sumarCredito(params) {
   const { data, error } = await supabase.rpc("sumar_credito", mapCreditoRpcParams(params));
 
   if (error) {
-    throw new Error("Error al sumar crédito.");
+    throw new Error(error.message || "Error al sumar crédito.");
   }
 
   return data;
@@ -125,7 +124,7 @@ export async function restarCredito(params) {
   const { data, error } = await supabase.rpc("restar_credito", mapCreditoRpcParams(params));
 
   if (error) {
-    throw new Error("Error al restar crédito.");
+    throw new Error(error.message || "Error al restar crédito.");
   }
 
   return data;

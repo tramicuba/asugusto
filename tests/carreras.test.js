@@ -1,40 +1,33 @@
 // tests/carreras.test.js
 // Pruebas del módulo de carreras de AsuGusto
 
-import * as carrerasAPI from "../api/carreras.js";
+jest.mock("../src/services/auth.js", () => ({
+  getCurrentUser: jest.fn().mockResolvedValue({
+    user_metadata: { role: "administrador" }
+  })
+}));
 
-// Mock del cliente Supabase
 jest.mock("../src/services/supabase.js", () => ({
   supabase: {
-    from: jest.fn(() => ({
-      select: jest.fn(),
-      insert: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn()
-    })),
+    from: jest.fn(),
     rpc: jest.fn()
   }
 }));
 
+import * as carrerasAPI from "../api/carreras.js";
+
 const { supabase } = require("../src/services/supabase.js");
 
 describe("API: Carreras", () => {
-
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // ============================
-  // 1. Obtener carreras
-  // ============================
   test("Debe obtener carreras correctamente", async () => {
-    const mockData = [
-      { id: "1", origen: "A", destino: "B", estado: "pendiente" }
-    ];
+    const mockData = [{ id: "1", origen: "A", destino: "B", estado: "pendiente" }];
 
-    supabase.from().select.mockResolvedValue({
-      data: mockData,
-      error: null
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockResolvedValue({ data: mockData, error: null })
     });
 
     const resultado = await carrerasAPI.obtenerCarreras();
@@ -43,9 +36,6 @@ describe("API: Carreras", () => {
     expect(supabase.from).toHaveBeenCalledWith("carreras");
   });
 
-  // ============================
-  // 2. Crear carrera
-  // ============================
   test("Debe crear carrera correctamente", async () => {
     const nuevaCarrera = {
       chofer_id: "123",
@@ -54,59 +44,63 @@ describe("API: Carreras", () => {
       precio: 50
     };
 
-    supabase.from().insert.mockResolvedValue({
-      data: [{ id: "abc123", ...nuevaCarrera }],
-      error: null
-    });
+    const query = {
+      insert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({
+        data: { id: "abc123", ...nuevaCarrera },
+        error: null
+      })
+    };
+
+    supabase.from.mockReturnValue(query);
 
     const resultado = await carrerasAPI.crearCarrera(nuevaCarrera);
 
     expect(resultado.id).toBe("abc123");
-    expect(supabase.from().insert).toHaveBeenCalledWith(nuevaCarrera);
+    expect(query.insert).toHaveBeenCalledWith(nuevaCarrera);
   });
 
-  // ============================
-  // 3. Actualizar carrera
-  // ============================
   test("Debe actualizar carrera correctamente", async () => {
     const cambios = { estado: "completada" };
 
-    supabase.from().update.mockResolvedValue({
-      data: [{ id: "1", estado: "completada" }],
-      error: null
-    });
+    const query = {
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({
+        data: { id: "1", estado: "completada" },
+        error: null
+      })
+    };
+
+    supabase.from.mockReturnValue(query);
 
     const resultado = await carrerasAPI.actualizarCarrera("1", cambios);
 
     expect(resultado.estado).toBe("completada");
-    expect(supabase.from().update).toHaveBeenCalledWith(cambios);
+    expect(query.update).toHaveBeenCalledWith(cambios);
   });
 
-  // ============================
-  // 4. Eliminar carrera
-  // ============================
   test("Debe eliminar carrera correctamente", async () => {
-    supabase.from().delete.mockResolvedValue({
-      data: [{ id: "1" }],
-      error: null
-    });
+    const query = {
+      delete: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      select: jest.fn().mockResolvedValue({ data: [{ id: "1" }], error: null })
+    };
+
+    supabase.from.mockReturnValue(query);
 
     const resultado = await carrerasAPI.eliminarCarrera("1");
 
     expect(resultado.id).toBe("1");
-    expect(supabase.from().delete).toHaveBeenCalled();
+    expect(query.delete).toHaveBeenCalled();
   });
 
-  // ============================
-  // 5. Crear carrera automática (RPC)
-  // ============================
   test("Debe crear carrera automática usando RPC", async () => {
     const mockId = "rpc123";
 
-    supabase.rpc.mockResolvedValue({
-      data: mockId,
-      error: null
-    });
+    supabase.rpc.mockResolvedValue({ data: mockId, error: null });
 
     const resultado = await carrerasAPI.crearCarreraAuto({
       chofer_id: "123",
@@ -126,27 +120,30 @@ describe("API: Carreras", () => {
     });
   });
 
-  // ============================
-  // 6. Manejo de errores
-  // ============================
   test("Debe manejar errores al obtener carreras", async () => {
-    supabase.from().select.mockResolvedValue({
-      data: null,
-      error: { message: "Error de lectura" }
+    supabase.from.mockReturnValue({
+      select: jest.fn().mockResolvedValue({
+        data: null,
+        error: { message: "Error de lectura" }
+      })
     });
 
-    await expect(carrerasAPI.obtenerCarreras())
-      .rejects.toThrow("Error de lectura");
+    await expect(carrerasAPI.obtenerCarreras()).rejects.toThrow("Error de lectura");
   });
 
   test("Debe manejar errores al crear carrera", async () => {
-    supabase.from().insert.mockResolvedValue({
-      data: null,
-      error: { message: "Error creando carrera" }
-    });
+    const query = {
+      insert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({
+        data: null,
+        error: { message: "Error creando carrera" }
+      })
+    };
 
-    await expect(carrerasAPI.crearCarrera({}))
-      .rejects.toThrow("Error creando carrera");
+    supabase.from.mockReturnValue(query);
+
+    await expect(carrerasAPI.crearCarrera({})).rejects.toThrow("Error creando carrera");
   });
 
   test("Debe manejar errores en RPC de carrera automática", async () => {
@@ -155,7 +152,6 @@ describe("API: Carreras", () => {
       error: { message: "Error RPC" }
     });
 
-    await expect(carrerasAPI.crearCarreraAuto({}))
-      .rejects.toThrow("Error RPC");
+    await expect(carrerasAPI.crearCarreraAuto({})).rejects.toThrow("Error RPC");
   });
 });

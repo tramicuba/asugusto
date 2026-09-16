@@ -15,7 +15,7 @@ export async function obtenerCarreras() {
     .select("*");
 
   if (error) {
-    throw new Error("Error al obtener carreras.");
+    throw new Error(error.message || "Error al obtener carreras.");
   }
 
   return data;
@@ -51,7 +51,7 @@ export async function crearCarrera(carrera) {
     .single();
 
   if (error) {
-    throw new Error("Error al crear carrera.");
+    throw new Error(error.message || "Error al crear carrera.");
   }
 
   return data;
@@ -70,7 +70,7 @@ export async function actualizarCarrera(id, cambios) {
     .single();
 
   if (error) {
-    throw new Error("Error al actualizar carrera.");
+    throw new Error(error.message || "Error al actualizar carrera.");
   }
 
   return data;
@@ -88,7 +88,7 @@ export async function eliminarCarrera(id) {
     .select();
 
   if (error) {
-    throw new Error("Error al eliminar carrera.");
+    throw new Error(error.message || "Error al eliminar carrera.");
   }
 
   return data?.[0] ?? { id };
@@ -100,8 +100,7 @@ function mapCarreraRpcParams(params = {}) {
     p_origen: params.origen,
     p_destino: params.destino,
     p_precio: params.precio,
-    p_zona: params.zona,
-    ...params
+    p_zona: params.zona
   };
 }
 
@@ -114,7 +113,7 @@ export async function crearCarreraAuto(params) {
   const { data, error } = await supabase.rpc("crear_carrera_auto", payload);
 
   if (error) {
-    throw new Error("Error al crear carrera automáticamente.");
+    throw new Error(error.message || "Error al crear carrera automáticamente.");
   }
 
   return data;

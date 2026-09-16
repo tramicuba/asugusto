@@ -15,7 +15,7 @@ export async function obtenerUsuarios() {
     .select("*");
 
   if (error) {
-    throw new Error("Error al obtener usuarios.");
+    throw new Error(error.message || "Error al obtener usuarios.");
   }
 
   return data;
@@ -51,7 +51,7 @@ export async function crearUsuario(usuario) {
     .single();
 
   if (error) {
-    throw new Error("Error al crear usuario.");
+    throw new Error(error.message || "Error al crear usuario.");
   }
 
   return data;
@@ -70,7 +70,7 @@ export async function actualizarUsuario(id, cambios) {
     .single();
 
   if (error) {
-    throw new Error("Error al actualizar usuario.");
+    throw new Error(error.message || "Error al actualizar usuario.");
   }
 
   return data;
@@ -88,7 +88,7 @@ export async function eliminarUsuario(id) {
     .select();
 
   if (error) {
-    throw new Error("Error al eliminar usuario.");
+    throw new Error(error.message || "Error al eliminar usuario.");
   }
 
   return data?.[0] ?? { id };

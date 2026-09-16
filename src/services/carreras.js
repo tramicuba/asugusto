@@ -1,11 +1,11 @@
 // src/services/carreras.js
 // Gestión de carreras usando Supabase
 
-import { supabaseCliente } from './supabase.js';
+import { supabase } from './supabase.js';
 
 // Obtener todas las carreras
 export async function obtenerCarreras() {
-    const { data, error } = await supabaseCliente
+    const { data, error } = await supabase
         .from('carreras')
         .select('*');
 
@@ -19,7 +19,7 @@ export async function obtenerCarreras() {
 
 // Obtener carreras por chofer
 export async function obtenerCarrerasPorChofer(chofer_id) {
-    const { data, error } = await supabaseCliente
+    const { data, error } = await supabase
         .from('carreras')
         .select('*')
         .eq('chofer_id', chofer_id);
@@ -34,7 +34,7 @@ export async function obtenerCarrerasPorChofer(chofer_id) {
 
 // Agregar carrera
 export async function agregarCarrera(carrera) {
-    const { data, error } = await supabaseCliente
+    const { data, error } = await supabase
         .from('carreras')
         .insert(carrera)
         .select();
@@ -49,7 +49,7 @@ export async function agregarCarrera(carrera) {
 
 // Actualizar carrera
 export async function actualizarCarrera(id, valores) {
-    const { data, error } = await supabaseCliente
+    const { data, error } = await supabase
         .from('carreras')
         .update(valores)
         .eq('id', id)
@@ -65,7 +65,7 @@ export async function actualizarCarrera(id, valores) {
 
 // Eliminar carrera
 export async function eliminarCarrera(id) {
-    const { error } = await supabaseCliente
+    const { error } = await supabase
         .from('carreras')
         .delete()
         .eq('id', id);
