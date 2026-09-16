@@ -98,6 +98,54 @@ textarea {
   display: none;
 }
 
+.home-container {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 1rem;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+  text-align: center;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255, 193, 7, 0.24), transparent 32%),
+    radial-gradient(circle at 85% 80%, rgba(0, 123, 255, 0.16), transparent 36%),
+    var(--color-fondo);
+}
+
+.home-container h1 {
+  margin-bottom: 0.5rem;
+  font-size: clamp(2.25rem, 6vw, 4.5rem);
+}
+
+.home-container p {
+  max-width: 38rem;
+  margin: 0 auto;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+}
+
+.home-btn {
+  min-width: 10rem;
+  background: var(--color-primario);
+  color: #fff;
+  font-weight: 600;
+}
+
+.home-btn:hover,
+.home-btn:focus-visible {
+  background: #0056b3;
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 86, 179, 0.2);
+  transform: translateY(-2px);
+}
+
 .alert {
   padding: 12px 16px;
   border-radius: 4px;
